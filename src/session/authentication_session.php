@@ -253,10 +253,20 @@ class ezcAuthenticationSession
      * Saves the authenticated username and the current timestamp in the session
      * variables.
      *
+     * If $data differs from what is stored in the session (a new login, or a
+     * different user), the session ID is regenerated first, so that a session
+     * ID which was known before the authentication (session fixation) can not
+     * be used to access the authenticated session.
+     *
      * @param string $data Information to save in the session, usually username
      */
     public function save( $data )
     {
+        if ( $this->load() !== $data )
+        {
+            $this->regenerateId();
+        }
+
         $_SESSION[$this->options->idKey] = $data;
         $_SESSION[$this->options->timestampKey] = time();
         $_SESSION[$this->options->lastActivityTimestampKey] = time();
@@ -273,15 +283,16 @@ class ezcAuthenticationSession
     }
 
     /**
-     * Regenerates the session ID.
+     * Regenerates the session ID and deletes the old session.
+     *
+     * Nothing is done if there is no active session or if the headers were
+     * already sent.
      */
     public function regenerateId()
     {
-        if ( !headers_sent() )
+        if ( session_status() === PHP_SESSION_ACTIVE && !headers_sent() )
         {
-            // ???? seems that PHPSESSID is not regenerated if session is destroyed first????
-            // session_destroy();
-            session_regenerate_id();
+            session_regenerate_id( true );
         }
     }
 
