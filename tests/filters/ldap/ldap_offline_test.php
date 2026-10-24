@@ -100,6 +100,41 @@ class ezcAuthenticationLdapOfflineTest extends ezcAuthenticationTest
         $this->assertEquals( 'ldap://ldap.example.com', $filter->buildUri( 'ldap://ldap.example.com', 389 ) );
     }
 
+    public function testLdapUriSingleHostWithPort()
+    {
+        $filter = $this->createFilter();
+        $this->assertEquals( 'ldap://ldap.example.com:10389', $filter->buildUri( 'ldap.example.com:10389', 389 ) );
+    }
+
+    public function testLdapUriHostList()
+    {
+        $filter = $this->createFilter();
+        $this->assertEquals( 'ldap://ldap1.example.com:389 ldap://ldap2.example.com:389', $filter->buildUri( 'ldap1.example.com ldap2.example.com', 389 ) );
+        $this->assertEquals( 'ldap://ldap1:10389 ldap://ldap2:10389 ldap://ldap3:10389', $filter->buildUri( "  ldap1\tldap2\n ldap3 ", 10389 ) );
+    }
+
+    public function testLdapUriHostListWithPorts()
+    {
+        $filter = $this->createFilter();
+        $this->assertEquals( 'ldap://ldap1:10389 ldap://ldap2:389', $filter->buildUri( 'ldap1:10389 ldap2', 389 ) );
+        $this->assertEquals( 'ldap://ldap1:389 ldap://ldap2:10636', $filter->buildUri( 'ldap1 ldap2:10636', 389 ) );
+    }
+
+    public function testLdapUriIpv6()
+    {
+        $filter = $this->createFilter();
+        $this->assertEquals( 'ldap://[::1]:389', $filter->buildUri( '::1', 389 ) );
+        $this->assertEquals( 'ldap://[::1]:389', $filter->buildUri( '[::1]', 389 ) );
+        $this->assertEquals( 'ldap://[2001:db8::1]:10389 ldap://ldap2:389', $filter->buildUri( '[2001:db8::1]:10389 ldap2', 389 ) );
+    }
+
+    public function testLdapUriLdapsList()
+    {
+        $filter = $this->createFilter();
+        $this->assertEquals( 'ldaps://ldap1:636 ldaps://ldap2:636', $filter->buildUri( 'ldaps://ldap1:636 ldaps://ldap2:636', 389 ) );
+        $this->assertEquals( 'ldaps://ldap1', $filter->buildUri( 'ldaps://ldap1', 389 ) );
+    }
+
     public function testLdapConnectWithoutDeprecation()
     {
         $filter = $this->createFilter();

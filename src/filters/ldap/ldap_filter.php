@@ -389,18 +389,52 @@ class ezcAuthenticationLdapFilter extends ezcAuthenticationFilter implements ezc
      * 'ldaps://host:636'), it is returned unchanged and $port is ignored,
      * which is how ldap_connect() treated its two arguments.
      *
-     * @param string $host The LDAP hostname
+     * Otherwise $host may be a single host name or, as accepted by
+     * ldap_connect() with OpenLDAP, a list of host names separated by
+     * whitespace ('ldap1 ldap2' or 'ldap1:10389 ldap2'), which the library
+     * tries in turn. Every host in the list becomes its own URI, and the
+     * URIs are joined with a space: 'ldap://ldap1:389 ldap://ldap2:389'.
+     * A host that already carries a port keeps it, and $port is used for
+     * the others. A bare IPv6 address is put in brackets.
+     *
+     * @param string $host The LDAP hostname, or a whitespace separated list of hostnames
      * @param int $port The LDAP port to connect to $host
      * @return string
      */
     protected function buildUri( $host, $port )
     {
-        if ( strpos( (string) $host, '/' ) !== false )
+        $host = (string) $host;
+        if ( strpos( $host, '/' ) !== false )
         {
             return $host;
         }
 
-        return 'ldap://' . $host . ':' . (int) $port;
+        $hosts = preg_split( '/\s+/', trim( $host ), -1, PREG_SPLIT_NO_EMPTY );
+        if ( count( $hosts ) === 0 )
+        {
+            $hosts = array( '' );
+        }
+
+        $uris = array();
+        foreach ( $hosts as $entry )
+        {
+            if ( preg_match( '/^(\[[^\]]*\]|[^:]*):\d+$/', $entry ) )
+            {
+                // 'host:port' or '[ipv6]:port'
+                $uris[] = 'ldap://' . $entry;
+            }
+            else if ( substr_count( $entry, ':' ) > 1 && $entry[0] !== '[' )
+            {
+                // bare IPv6 address
+                $uris[] = 'ldap://[' . $entry . ']:' . (int) $port;
+            }
+            else
+            {
+                $uris[] = 'ldap://' . $entry . ':' . (int) $port;
+            }
+        }
+
+        return implode( ' ', $uris );
     }
 
     /**
