@@ -36,7 +36,8 @@
  *          the current timestamp in the session key ezcAuth_timestamp
  * - destroy - deletes the information stored in the session keys ezcAuth_id
  *             and ezcAuth_timestamp
- * - regenerateId - regenerates the PHPSESSID value
+ * - regenerateId - regenerates the PHPSESSID value, but only if the session
+ *                  is active and no headers were sent yet
  *
  * Example of use (combined with the Htpasswd filter):
  * <code>
@@ -285,15 +286,29 @@ class ezcAuthenticationSession
     /**
      * Regenerates the session ID and deletes the old session.
      *
-     * Nothing is done if there is no active session or if the headers were
-     * already sent.
+     * IMPORTANT: the session ID is NOT regenerated if there is no active
+     * session (session_start() was not called, see {@link start()}) or if the
+     * headers were already sent, because a new session cookie can not be sent
+     * any more. No exception is thrown and no error is raised in that case,
+     * so that existing applications keep working. The session then keeps the
+     * ID which it had before the authentication, which leaves it open to
+     * session fixation. Call {@link start()} before any output is sent, or
+     * check the return value of this method.
+     *
+     * This method is called by {@link save()} when the authenticated user
+     * changes, and by {@link run()} when the session expired. In both cases
+     * the old session is deleted, so a request which still runs in parallel
+     * with the old session ID loses its session data.
+     *
+     * @return bool True if the session ID was regenerated, false otherwise
      */
     public function regenerateId()
     {
         if ( session_status() === PHP_SESSION_ACTIVE && !headers_sent() )
         {
-            session_regenerate_id( true );
+            return session_regenerate_id( true );
         }
+        return false;
     }
 
     /**

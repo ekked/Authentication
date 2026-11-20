@@ -170,6 +170,16 @@ class ezcAuthenticationSessionTest extends ezcAuthenticationTest
         $this->assertEquals( false, $session->isValid( $credentials ) );
     }
 
+    public function testSessionRegenerateIdWithoutActiveSession()
+    {
+        if ( session_status() === PHP_SESSION_ACTIVE )
+        {
+            $this->markTestSkipped( 'A session is active.' );
+        }
+        $session = new ezcAuthenticationSession();
+        $this->assertFalse( $session->regenerateId() );
+    }
+
     public function testSessionSaveNewLoginRegeneratesId()
     {
         $_SESSION = array();
